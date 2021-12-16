@@ -395,15 +395,7 @@ module Asciidoctor
 <title>#{chapter_title}</title>
 <link rel="stylesheet" type="text/css" href="styles/epub3.css"/>
 <link rel="stylesheet" type="text/css" href="styles/epub3-css3-only.css" media="(min-device-width: 0px)"/>
-#{icon_css_head}<script type="text/javascript"><![CDATA[
-document.addEventListener('DOMContentLoaded', function(event, reader) {
-  if (!(reader = navigator.epubReadingSystem)) {
-    if (navigator.userAgent.indexOf(' calibre/') >= 0) reader = { name: 'calibre-desktop' };
-    else if (window.parent == window || !(reader = window.parent.navigator.epubReadingSystem)) return;
-  }
-  document.body.setAttribute('class', reader.name.toLowerCase().replace(/ /g, '-'));
-});
-]]></script>)]
+#{icon_css_head})]
 
         syntax_hl = node.document.syntax_highlighter
         epub_type_attr = node.respond_to?(:section) && node.sectname != 'section' ? %( epub:type="#{node.sectname}") : ''
