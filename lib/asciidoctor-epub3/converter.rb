@@ -2,6 +2,7 @@
 
 require 'mime/types'
 require 'open3'
+require 'sass'
 require_relative 'font_icon_map'
 
 module Asciidoctor
@@ -229,6 +230,10 @@ module Asciidoctor
         landmarks = []
 
         front_cover = add_cover_page node, 'front-cover'
+        if front_cover.nil? && @format != :kf8 && node.doctype == 'book'
+          # TODO(#352): add textual front cover similar to PDF
+        end
+
         landmarks << { type: 'cover', href: front_cover.href, title: 'Front Cover' } unless front_cover.nil?
 
         front_matter_page = add_front_matter_page node
@@ -388,10 +393,10 @@ module Asciidoctor
         linkcss = true
 
         # NOTE: kindlegen seems to mangle the <header> element, so we wrap its content in a div
-        lines = [%(<!DOCTYPE html>
+        lines = [%(<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:mml="http://www.w3.org/1998/Math/MathML" xml:lang="#{lang = node.document.attr 'lang', 'en'}" lang="#{lang}">
 <head>
-<meta charset="UTF-8"/>
 <title>#{chapter_title}</title>
 <link rel="stylesheet" type="text/css" href="styles/epub3.css"/>
 <link rel="stylesheet" type="text/css" href="styles/epub3-css3-only.css" media="(min-device-width: 0px)"/>
@@ -442,9 +447,10 @@ module Asciidoctor
         chapter_item
       end
 
+      # @param node [Asciidoctor::Section]
       def convert_section node
         if add_chapter(node).nil?
-          hlevel = node.level
+          hlevel = node.level.clamp 1, 6
           epub_type_attr = node.sectname == 'section' ? '' : %( epub:type="#{node.sectname}")
           div_classes = [%(sect#{node.level}), node.role].compact
           title = get_numbered_title node
@@ -537,7 +543,7 @@ module Asciidoctor
                       logger.warn %(unknown admonition type: #{type})
                       'notice'
                     end
-        %(<aside#{id_attr} class="admonition #{type}"#{title_attr} epub:type="#{epub_type}">
+        %(<aside#{id_attr} class="admonition #{type}#{(role = node.role) ? " #{role}" : ''}"#{title_attr} epub:type="#{epub_type}">
 #{title_el}<div class="content">
 #{output_content node}
 </div>
@@ -708,6 +714,9 @@ module Asciidoctor
         ]
         if (role = node.role)
           table_classes << role
+        end
+        if (float = node.attr 'float')
+          table_classes << float
         end
         table_styles = []
         if (autowidth = node.option? 'autowidth') && !(node.attr? 'width')
@@ -1060,7 +1069,7 @@ module Asciidoctor
           poster_attr = %( poster="#{poster}")
         end
 
-        %(<figure#{id_attr} class="video#{prepend_space node.role}">#{title_element}
+        %(<figure#{id_attr} class="video#{prepend_space node.role}#{prepend_space node.attr('float')}">#{title_element}
 <div class="content">
 <video src="#{target}#{time_anchor}"#{width_attr}#{height_attr}#{autoplay_attr}#{poster_attr}#{controls_attr}#{loop_attr}>
 <div>Your Reading System does not support (this) video.</div>
@@ -1075,7 +1084,7 @@ module Asciidoctor
         id_attr = node.id ? %( id="#{node.id}") : ''
         title_element = node.title? ? %(\n<figcaption>#{node.captioned_title}</figcaption>) : ''
         img_attrs = resolve_image_attrs node
-        %(<figure#{id_attr} class="image#{prepend_space node.role}">
+        %(<figure#{id_attr} class="image#{prepend_space node.role}#{prepend_space node.attr('float')}">
 <div class="content">
 <img src="#{target}"#{prepend_space img_attrs * ' '} />
 </div>#{title_element}
@@ -1180,13 +1189,14 @@ module Asciidoctor
           i_classes << %(icon-flip-#{(node.attr 'flip')[0]}) if node.attr? 'flip'
           i_classes << %(icon-rotate-#{node.attr 'rotate'}) if node.attr? 'rotate'
           i_classes << node.role if node.role?
+          i_classes << node.attr('float') if node.attr 'float'
           %(<i class="#{i_classes * ' '}"></i>)
         else
           target = node.image_uri node.target
           register_media_file node, target, 'image'
 
           img_attrs = resolve_image_attrs node
-          img_attrs << %(class="inline#{prepend_space node.role}")
+          img_attrs << %(class="inline#{prepend_space node.role}#{prepend_space node.attr('float')}")
           %(<img src="#{target}"#{prepend_space img_attrs * ' '}/>)
         end
       end
@@ -1296,16 +1306,15 @@ module Asciidoctor
                   end
 
         # TODO: improve design/UX of custom theme functionality, including custom fonts
-
-        if format == :kf8
-          # NOTE: add layer of indirection so Kindle Direct Publishing (KDP) doesn't strip font-related CSS rules
-          @book.add_item 'styles/epub3.css', content: '@import url("epub3-proxied.css");'.to_ios
-          @book.add_item 'styles/epub3-css3-only.css', content: '@import url("epub3-css3-only-proxied.css");'.to_ios
-          @book.add_item 'styles/epub3-proxied.css', content: (postprocess_css_file ::File.join(workdir, 'epub3.css'), format)
-          @book.add_item 'styles/epub3-css3-only-proxied.css', content: (postprocess_css_file ::File.join(workdir, 'epub3-css3-only.css'), format)
-        else
-          @book.add_item 'styles/epub3.css', content: (postprocess_css_file ::File.join(workdir, 'epub3.css'), format)
-          @book.add_item 'styles/epub3-css3-only.css', content: (postprocess_css_file ::File.join(workdir, 'epub3-css3-only.css'), format)
+        %w(epub3 epub3-css3-only).each do |f|
+          css = load_css_file File.join(workdir, %(#{f}.scss))
+          if format == :kf8
+            # NOTE: add layer of indirection so Kindle Direct Publishing (KDP) doesn't strip font-related CSS rules
+            @book.add_item %(styles/#{f}.css), content: %(@import url("#{f}-proxied.css");).to_ios
+            @book.add_item %(styles/#{f}-proxied.css), content: css.to_ios
+          else
+            @book.add_item %(styles/#{f}.css), content: css.to_ios
+          end
         end
 
         syntax_hl = doc.syntax_highlighter
@@ -1321,8 +1330,8 @@ module Asciidoctor
           end
         end
 
-        font_files, font_css = select_fonts ::File.join(DATA_DIR, 'styles/epub3-fonts.css'), (doc.attr 'scripts', 'latin')
-        @book.add_item 'styles/epub3-fonts.css', content: font_css
+        font_files, font_css = select_fonts load_css_file(File.join(DATA_DIR, 'styles/epub3-fonts.scss')), (doc.attr 'scripts', 'latin')
+        @book.add_item 'styles/epub3-fonts.css', content: font_css.to_ios
         unless font_files.empty?
           # NOTE: metadata property in oepbs package manifest doesn't work; must use proprietary iBooks file instead
           #(@book.metadata.add_metadata 'meta', 'true')['property'] = 'ibooks:specified-fonts' unless format == :kf8
@@ -1340,6 +1349,9 @@ module Asciidoctor
         nil
       end
 
+      # @param doc [Asciidoctor::Document]
+      # @param name [String]
+      # @return [GEPUB::Item, nil]
       def add_cover_page doc, name
         image_attr_name = %(#{name}-image)
 
@@ -1360,8 +1372,10 @@ module Asciidoctor
         workdir = doc.attr 'docdir'
         workdir = '.' if workdir.nil_or_empty?
 
+        image_path = File.join workdir, image_path unless File.absolute_path? image_path
+
         begin
-          @book.add_item(image_href, content: File.join(workdir, image_path)).cover_image
+          @book.add_item(image_href, content: image_path).cover_image
         rescue => e
           logger.error %(#{::File.basename doc.attr('docfile')}: error adding cover image. Make sure that :#{image_attr_name}: attribute points to a valid image file. #{e})
           return nil
@@ -1374,10 +1388,10 @@ module Asciidoctor
         end
 
         # NOTE: SVG wrapper maintains aspect ratio and confines image to view box
-        content = %(<!DOCTYPE html>
+        content = %(<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en" lang="en">
 <head>
-<meta charset="UTF-8"/>
 <title>#{sanitize_doctitle_xml doc, :cdata}</title>
 <style type="text/css">
 @page {
@@ -1482,10 +1496,10 @@ body > svg {
       end
 
       def nav_doc doc, items, landmarks, depth
-        lines = [%(<!DOCTYPE html>
+        lines = [%(<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="#{lang = doc.attr 'lang', 'en'}" lang="#{lang}">
 <head>
-<meta charset="UTF-8"/>
 <title>#{sanitize_doctitle_xml doc, :cdata}</title>
 <link rel="stylesheet" type="text/css" href="styles/epub3.css"/>
 <link rel="stylesheet" type="text/css" href="styles/epub3-css3-only.css" media="(min-device-width: 0px)"/>
@@ -1597,41 +1611,28 @@ body > svg {
 
       # Swap fonts in CSS based on the value of the document attribute 'scripts',
       # then return the list of fonts as well as the font CSS.
-      def select_fonts filename, scripts = 'latin'
-        font_css = ::File.read filename
+      def select_fonts font_css, scripts = 'latin'
         font_css = font_css.gsub(/(?<=-)latin(?=\.ttf\))/, scripts) unless scripts == 'latin'
 
         # match CSS font urls in the forms of:
         # src: url(../fonts/notoserif-regular-latin.ttf);
         # src: url(../fonts/notoserif-regular-latin.ttf) format("truetype");
-        font_list = font_css.scan(/url\(\.\.\/([^)]+\.ttf)\)/).flatten
+        font_list = font_css.scan(/url\(\.\.\/([^)]+?\.ttf)\)/).flatten
 
-        [font_list, font_css.to_ios]
+        [font_list, font_css]
       end
 
-      def postprocess_css_file filename, format
-        return filename unless format == :kf8
-        postprocess_css ::File.read(filename), format
+      def load_css_file filename
+        template = File.read filename
+        load_paths = [File.dirname(filename)]
+        sass_engine = Sass::Engine.new template, syntax: :scss, cache: false, load_paths: load_paths, style: :compressed
+        sass_engine.render
       end
 
-      def postprocess_css content, format
-        return content.to_ios unless format == :kf8
-        # TODO: convert regular expressions to constants
-        content
-          .gsub(/^  -webkit-column-break-.*\n/, '')
-          .gsub(/^  max-width: .*\n/, '')
-          .to_ios
-      end
-
-      # NOTE: Kindle requires that
-      #      <meta charset="utf-8"/>
-      #      be converted to
-      #      <meta http-equiv="Content-Type" content="application/xml+xhtml; charset=UTF-8"/>
       def postprocess_xhtml content
         return content.to_ios unless @format == :kf8
         # TODO: convert regular expressions to constants
         content
-          .gsub(/<meta charset="(.+?)"\/>/, '<meta http-equiv="Content-Type" content="application/xml+xhtml; charset=\1"/>')
           .gsub(/<img([^>]+) style="width: (\d\d)%;"/, '<img\1 style="width: \2%; height: \2%;"')
           .gsub(/<script type="text\/javascript">.*?<\/script>\n?/m, '')
           .to_ios

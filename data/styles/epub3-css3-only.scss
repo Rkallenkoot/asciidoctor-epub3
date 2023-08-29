@@ -1,31 +1,8 @@
-/* @page is for EPUB2 only */
-@page {
-  margin: 0;
-}
-
-body.calibre-desktop {
-  padding: 20pt 0 !important;
-}
-
-body.calibre-desktop > section {
-  margin: 0 25pt;
-}
-
 /* Gitden & Namo default to 16px font-size; bump it to 19px (118.75%) */
 body.gitden-reader,
 body.namo-epub-library {
   font-size: 118.75%;
 }
-
-/* Gitden doesn't give us much margin, so let's roughly match Aldiko and Kindle (narrow setting) */
-body.gitden-reader {
-  margin: 0 5pt !important;
-}
-
-/* Namo has the same margin problem, except setting side margins doesn't work */
-/*body.namo-epub-library > section.chapter {
-  margin: 0 5pt;
-}*/
 
 /* Use tighter margins and smaller font (18px) on phones (Nexus 4 and smaller) */
 @media only screen and (max-device-width: 768px) and (max-device-height: 1280px), only screen and (max-device-width: 1280px) and (max-device-height: 768px) {
@@ -33,13 +10,6 @@ body.gitden-reader {
   body.namo-epub-library {
     font-size: 112.5%;
   }
-
-  /*body.gitden-reader {
-    margin: 0 5pt !important;
-  }*/
-  /*body.namo-epub-library > section.chapter {
-    margin: 0 5pt;
-  }*/
 }
 
 body.gitden-reader pre {
@@ -55,7 +25,7 @@ h1 :not(code), h2 :not(code), h3:not(.list-heading) :not(code), h4 :not(code), h
 }
 
 /* QUESTION what about nested elements inside code? */
-body code, body kbd, body pre, pre :not(code) {
+body code, body kbd, body :not(.verse) > pre, :not(.verse) > pre :not(code) {
   /* !important required to override custom font setting in Kindle / Gitden / Namo */
   /* Gitden requires the extra weight of a parent selector */
   /* Kindle and Gitden require the override on pre child elements */

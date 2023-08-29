@@ -17,7 +17,7 @@ An extension for Asciidoctor that converts AsciiDoc documents to EPUB3 and KF8/M
   s.homepage = 'https://github.com/asciidoctor/asciidoctor-epub3'
   s.license = 'MIT'
 
-  s.required_ruby_version = '>= 2.4.0'
+  s.required_ruby_version = '>= 2.5.0'
 
   files = begin
     (result = Open3.popen3('git ls-files -z') {|_, out| out.read }.split %(\0)).empty? ? Dir['**/*'] : result
@@ -33,15 +33,18 @@ An extension for Asciidoctor that converts AsciiDoc documents to EPUB3 and KF8/M
   s.add_development_dependency 'asciidoctor-diagram', '>= 1.5.0', '< 3.0.0'
   s.add_development_dependency 'asciimath', '~> 2.0'
   s.add_development_dependency 'coderay', '~> 1.1.0'
-  s.add_development_dependency 'pygments.rb', '~> 2.2.0'
+  s.add_development_dependency 'pygments.rb', '~> 2.4.0'
   s.add_development_dependency 'rake', '~> 13.0.0'
   s.add_development_dependency 'rouge', '~> 3.0'
-  s.add_development_dependency 'rspec', '~> 3.10.0'
-  s.add_development_dependency 'rubocop', '~> 1.12.1'
-  s.add_development_dependency 'rubocop-rake', '~> 0.5.0'
-  s.add_development_dependency 'rubocop-rspec', '~> 2.2.0'
+  s.add_development_dependency 'rspec', '~> 3.12.0'
+  s.add_development_dependency 'rubocop', '~> 1.28.2'
+  s.add_development_dependency 'rubocop-rake', '~> 0.6.0'
+  s.add_development_dependency 'rubocop-rspec', '~> 2.10.0'
 
   s.add_runtime_dependency 'asciidoctor', '>= 1.5.6', '< 3.0.0'
   s.add_runtime_dependency 'gepub', '~> 1.0.0'
   s.add_runtime_dependency 'mime-types', '~> 3.0'
+
+  # TODO: switch to 'sass-embedded' when we drop Ruby 2.5 support
+  s.add_runtime_dependency 'sass'
 end

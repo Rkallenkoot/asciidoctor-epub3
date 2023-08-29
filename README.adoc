@@ -4,19 +4,19 @@ Dan Allen <https://github.com/mojavelinux[@mojavelinux]>; Sarah White <https://g
 :project-handle: asciidoctor-epub3
 :uri-project: https://github.com/asciidoctor/{project-handle}
 :uri-gem: https://rubygems.org/gems/asciidoctor-epub3
-:uri-ci: {uri-project}/actions?query=branch%3Amaster
+:uri-ci: {uri-project}/actions?query=branch%3Amain
 :uri-issues: {uri-project}/issues
 :uri-rvm: https://rvm.io
 
 image:https://img.shields.io/badge/zulip-join_chat-brightgreen.svg[project chat,link=https://asciidoctor.zulipchat.com/]
 image:https://img.shields.io/gem/v/asciidoctor-epub3.svg[Latest Release,link={uri-gem}]
-image:{uri-project}/workflows/CI/badge.svg?branch=master[GitHub Actions,link={uri-ci}]
+image:{uri-project}/workflows/CI/badge.svg?branch=main[GitHub Actions,link={uri-ci}]
 
 {project-name} is a set of Asciidoctor extensions for converting AsciiDoc documents directly to the EPUB3 and KF8/MOBI e-book formats.
 
 == Documentation
 
-Detailed installation and usage instructions can be found on the https://docs.asciidoctor.org/asciidoctor-epub3/latest/[Asciidoctor Docs site].
+Detailed installation and usage instructions can be found on the https://docs.asciidoctor.org/epub3-converter/latest/[Asciidoctor Docs site].
 
 == Installation
 
